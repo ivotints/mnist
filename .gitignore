@@ -1,3 +1,5 @@
 venv/
 .vscode
 models/
+__pycache__/
+tflite_models/
