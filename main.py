@@ -25,7 +25,7 @@ def visualize_mnist_examples(x_train, y_train):
         plt.imshow(x_train[idx], cmap='gray')
         plt.title(f"Digit: {i}")
         plt.axis('off')
-    # plt.tight_layout()
+    plt.tight_layout()
     plt.savefig('mnist_examples.png')
     return plt.gcf()
 
@@ -40,37 +40,45 @@ def visualize_class_distribution(y_train, y_test):
     plt.ylabel('Amount')
 
     plt.subplot(1, 2, 2)
-    unique_train, counts_train = np.unique(y_test, return_counts=True)
-    plt.bar(unique_train, counts_train)
+    unique_test, counts_test = np.unique(y_test, return_counts=True)
+    plt.bar(unique_test, counts_test)
     plt.title('Distribution of classes in test sample')
     plt.xlabel('Digit')
     plt.ylabel('Amount')
 
-    # plt.tight_layout()
-    plt.savefig('mnist_examples.png')
+    plt.tight_layout()
+    plt.savefig('class_distribution.png')
     return plt.gcf()
-
-
 
 if __name__ == "__main__":
     (x_train, y_train), (x_test, y_test) = load_mnist_data()
 
     root = tk.Tk()
-    root.title("MNIST Visualisation")
+    root.title("MNIST Visualization")
     root.geometry("800x600")
+    
+    # Ensure proper closing when X button is pressed
+    root.protocol("WM_DELETE_WINDOW", root.quit)
 
     notebook = ttk.Notebook(root)
+    
+    # Create separate tabs for each visualization
     tab1 = ttk.Frame(notebook)
-    notebook.add(tab1, text="Visualization of data")
+    tab2 = ttk.Frame(notebook)
+    
+    notebook.add(tab1, text="MNIST Examples")
+    notebook.add(tab2, text="Class Distribution")
     notebook.pack(expand=1, fill="both")
 
+    # Add MNIST examples to the first tab
     fig1 = visualize_mnist_examples(x_train, y_train)
     canvas1 = FigureCanvasTkAgg(fig1, master=tab1)
     canvas1.draw()
     canvas1.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
+    # Add class distribution visualization to the second tab
     fig2 = visualize_class_distribution(y_train, y_test)
-    canvas2 = FigureCanvasTkAgg(fig2, master=tab1)
+    canvas2 = FigureCanvasTkAgg(fig2, master=tab2)
     canvas2.draw()
     canvas2.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
