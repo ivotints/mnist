@@ -2,6 +2,7 @@ import tensorflow as tf
 import os
 import numpy as np
 from tensorflow import keras
+import time
 
 TFLITE_MODELS_DIR = os.path.join('tflite_models')
 ASSETS_DIR = os.path.join('assets')
@@ -137,3 +138,132 @@ def save_comparison_results(results, keras_size, float32_size, int8_size):
     
     print(f"Comparison results saved to {results_path}")
     return results_path
+
+def benchmark_model(interpreter, test_data, num_runs=100):
+    """Benchmark inference time for a TFLite model"""
+    input_details = interpreter.get_input_details()
+    input_dtype = input_details[0]['dtype']
+    
+    # Prepare test data based on model input requirements
+    processed_test_data = []
+    for sample in test_data[:num_runs]:
+        if input_dtype == np.int8:
+            # For int8 quantized model, scale the input
+            input_scale, input_zero_point = input_details[0]["quantization"]
+            processed_sample = sample / input_scale + input_zero_point
+            processed_sample = np.clip(processed_sample, -128, 127).astype(np.int8)
+        else:
+            # For float32 models, use as is
+            processed_sample = sample.astype(np.float32)
+        processed_test_data.append(processed_sample)
+    
+    processed_test_data = np.array(processed_test_data)
+    
+    # Warm up
+    for _ in range(10):
+        interpreter.set_tensor(input_details[0]['index'], processed_test_data[0:1])
+        interpreter.invoke()
+    
+    # Benchmark
+    times = []
+    for i in range(len(processed_test_data)):
+        start_time = time.time()
+        interpreter.set_tensor(input_details[0]['index'], processed_test_data[i:i+1])
+        interpreter.invoke()
+        end_time = time.time()
+        times.append((end_time - start_time) * 1000)  # Convert to milliseconds
+    
+    return {
+        'mean_time': np.mean(times),
+        'std_time': np.std(times),
+        'min_time': np.min(times),
+        'max_time': np.max(times),
+        'times': times
+    }
+
+def benchmark_keras_model(model, test_data, num_runs=100):
+    """Benchmark inference time for a Keras model"""
+    # Warm up
+    for _ in range(10):
+        model.predict(test_data[0:1], verbose=0)
+    
+    # Benchmark
+    times = []
+    for i in range(min(num_runs, len(test_data))):
+        start_time = time.time()
+        model.predict(test_data[i:i+1], verbose=0)
+        end_time = time.time()
+        times.append((end_time - start_time) * 1000)  # Convert to milliseconds
+    
+    return {
+        'mean_time': np.mean(times),
+        'std_time': np.std(times),
+        'min_time': np.min(times),
+        'max_time': np.max(times),
+        'times': times
+    }
+
+def run_performance_tests(keras_model, tflite_float32_path, tflite_int8_path, test_data):
+    """Run performance tests for all model formats"""
+    results = {}
+    
+    print("Running performance tests...")
+    
+    # Test Keras model
+    print("Testing Keras model...")
+    keras_perf = benchmark_keras_model(keras_model, test_data)
+    results['keras'] = keras_perf
+    
+    # Test TFLite Float32
+    print("Testing TFLite Float32...")
+    interpreter_float32 = load_tflite_model(tflite_float32_path)
+    float32_perf = benchmark_model(interpreter_float32, test_data)
+    results['tflite_float32'] = float32_perf
+    
+    # Test TFLite Int8
+    print("Testing TFLite Int8...")
+    interpreter_int8 = load_tflite_model(tflite_int8_path)
+    int8_perf = benchmark_model(interpreter_int8, test_data)
+    results['tflite_int8'] = int8_perf
+    
+    return results
+
+def save_performance_results(perf_results):
+    """Save performance test results to a text file"""
+    results_path = os.path.join(ASSETS_DIR, 'performance_test_results.txt')
+    
+    with open(results_path, 'w') as f:
+        f.write("TFLite Performance Test Results\n")
+        f.write("=" * 40 + "\n\n")
+        
+        f.write("Inference Time (milliseconds per prediction)\n")
+        f.write("-" * 50 + "\n")
+        
+        for model_name, results in perf_results.items():
+            f.write(f"\n{model_name.upper()}:\n")
+            f.write(f"  Mean: {results['mean_time']:.3f} ms\n")
+            f.write(f"  Std:  {results['std_time']:.3f} ms\n")
+            f.write(f"  Min:  {results['min_time']:.3f} ms\n")
+            f.write(f"  Max:  {results['max_time']:.3f} ms\n")
+        
+        # Calculate speedup ratios
+        keras_time = perf_results['keras']['mean_time']
+        float32_time = perf_results['tflite_float32']['mean_time']
+        int8_time = perf_results['tflite_int8']['mean_time']
+        
+        f.write("\nSpeedup Ratios (lower is better):\n")
+        f.write(f"  Float32/Keras: {keras_time/float32_time:.2f}x\n")
+        f.write(f"  Int8/Keras: {keras_time/int8_time:.2f}x\n")
+        f.write(f"  Int8/Float32: {float32_time/int8_time:.2f}x\n")
+    
+    print(f"Performance results saved to {results_path}")
+    return results_path
+
+def load_existing_tflite_model(model_path):
+    """Load an existing TFLite model from file"""
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model file not found: {model_path}")
+    
+    interpreter = tf.lite.Interpreter(model_path=model_path)
+    interpreter.allocate_tensors()
+    return interpreter

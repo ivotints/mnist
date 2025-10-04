@@ -1,0 +1,20 @@
+TFLite Model Comparison Results
+========================================
+
+Model Accuracy Comparison:
+Original Keras: 0.9899
+TFLite Float32: 0.9899
+TFLite Int8: 0.9900
+
+Accuracy drop Float32: 0.0000
+Accuracy drop Int8: -0.0001
+
+Model Sizes:
+Keras: 2.61 MB
+TFLite Float32: 0.86 MB
+TFLite Int8: 0.22 MB
+
+Compression ratios:
+Float32/Keras: 0.33x
+Int8/Keras: 0.09x
+Int8/Float32: 0.26x

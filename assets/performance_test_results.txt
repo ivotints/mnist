@@ -1,0 +1,28 @@
+TFLite Performance Test Results
+========================================
+
+Inference Time (milliseconds per prediction)
+--------------------------------------------------
+
+KERAS:
+  Mean: 32.300 ms
+  Std:  0.765 ms
+  Min:  31.611 ms
+  Max:  37.794 ms
+
+TFLITE_FLOAT32:
+  Mean: 0.059 ms
+  Std:  0.001 ms
+  Min:  0.057 ms
+  Max:  0.065 ms
+
+TFLITE_INT8:
+  Mean: 0.028 ms
+  Std:  0.001 ms
+  Min:  0.027 ms
+  Max:  0.033 ms
+
+Speedup Ratios (lower is better):
+  Float32/Keras: 549.60x
+  Int8/Keras: 1154.17x
+  Int8/Float32: 2.10x

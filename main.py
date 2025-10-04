@@ -8,7 +8,9 @@ import os
 from src.data_utils import load_mnist_data, visualize_mnist_examples, visualize_class_distribution
 from src.model_utils import create_model, TrainingThread, TrainingHistoryCallback, load_model, save_model, MODEL_PATH
 from src.drawing_canvas import DrawingCanvas
-from src.tflite_utils import convert_to_tflite_float32, convert_to_tflite_int8, compare_models, get_model_size_mb, save_comparison_results
+from src.tflite_utils import (convert_to_tflite_float32, convert_to_tflite_int8, compare_models, 
+                             get_model_size_mb, save_comparison_results, run_performance_tests, 
+                             save_performance_results, load_existing_tflite_model)
 
 os.makedirs('models', exist_ok=True)
 os.makedirs('assets', exist_ok=True)
@@ -153,6 +155,8 @@ if __name__ == "__main__":
     ttk.Button(export_frame, text="Export Float32 TFLite", command=lambda: export_float32()).grid(row=0, column=0, padx=5, pady=5)
     ttk.Button(export_frame, text="Export Int8 TFLite", command=lambda: export_int8()).grid(row=0, column=1, padx=5, pady=5)
     ttk.Button(export_frame, text="Compare Models", command=lambda: compare_model_performance()).grid(row=0, column=2, padx=5, pady=5)
+    ttk.Button(export_frame, text="Performance Test", command=lambda: run_performance_test()).grid(row=0, column=3, padx=5, pady=5)
+    ttk.Button(export_frame, text="Load TFLite Model", command=lambda: load_tflite_model_dialog()).grid(row=0, column=4, padx=5, pady=5)
 
     # Results display
     results_text = tk.Text(tflite_frame, height=15, wrap=tk.WORD)
@@ -161,6 +165,7 @@ if __name__ == "__main__":
     # Global variables for TFLite models
     tflite_float32_path = None
     tflite_int8_path = None
+    loaded_tflite_interpreter = None
 
     def export_float32():
         global model, tflite_float32_path
@@ -246,5 +251,68 @@ if __name__ == "__main__":
 
         except Exception as e:
             messagebox.showerror("Error", f"Failed to compare models: {e}")
+
+    def run_performance_test():
+        global model, tflite_float32_path, tflite_int8_path
+        if model is None:
+            messagebox.showerror("Error", "Please train a model first")
+            return
+        if tflite_float32_path is None or tflite_int8_path is None:
+            messagebox.showerror("Error", "Please export both Float32 and Int8 models first")
+            return
+
+        try:
+            results_text.insert(tk.END, "Running performance tests...\n")
+            root.update()  # Update UI
+            
+            perf_results = run_performance_tests(model, tflite_float32_path, tflite_int8_path, x_test[:100])  # Test on first 100 samples
+            
+            results_text.insert(tk.END, "\nPerformance Test Results (ms per prediction):\n")
+            results_text.insert(tk.END, "-" * 50 + "\n")
+            
+            for model_name, results in perf_results.items():
+                results_text.insert(tk.END, f"\n{model_name.upper()}:\n")
+                results_text.insert(tk.END, f"  Mean: {results['mean_time']:.3f} ms\n")
+                results_text.insert(tk.END, f"  Std:  {results['std_time']:.3f} ms\n")
+                results_text.insert(tk.END, f"  Min:  {results['min_time']:.3f} ms\n")
+                results_text.insert(tk.END, f"  Max:  {results['max_time']:.3f} ms\n")
+            
+            # Calculate speedup ratios
+            keras_time = perf_results['keras']['mean_time']
+            float32_time = perf_results['tflite_float32']['mean_time']
+            int8_time = perf_results['tflite_int8']['mean_time']
+            
+            results_text.insert(tk.END, "\nSpeedup Ratios (lower is better):\n")
+            results_text.insert(tk.END, f"  Float32/Keras: {keras_time/float32_time:.2f}x\n")
+            results_text.insert(tk.END, f"  Int8/Keras: {keras_time/int8_time:.2f}x\n")
+            results_text.insert(tk.END, f"  Int8/Float32: {float32_time/int8_time:.2f}x\n\n")
+            
+            # Save results to file
+            perf_file = save_performance_results(perf_results)
+            results_text.insert(tk.END, f"Performance results saved to: {perf_file}\n\n")
+            
+            results_text.see(tk.END)
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to run performance tests: {e}")
+
+    def load_tflite_model_dialog():
+        global loaded_tflite_interpreter
+        from tkinter import filedialog
+        
+        file_path = filedialog.askopenfilename(
+            title="Select TFLite model file",
+            filetypes=[("TFLite files", "*.tflite"), ("All files", "*.*")],
+            initialdir="tflite_models"
+        )
+        
+        if file_path:
+            try:
+                loaded_tflite_interpreter = load_existing_tflite_model(file_path)
+                results_text.insert(tk.END, f"Loaded TFLite model: {os.path.basename(file_path)}\n")
+                results_text.insert(tk.END, f"Model size: {get_model_size_mb(file_path):.2f} MB\n\n")
+                results_text.see(tk.END)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load model: {e}")
 
     root.mainloop()
