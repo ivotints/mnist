@@ -5,7 +5,7 @@ from tensorflow import keras
 import time
 
 TFLITE_MODELS_DIR = os.path.join('tflite_models')
-ASSETS_DIR = os.path.join('assets')
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets')
 os.makedirs(TFLITE_MODELS_DIR, exist_ok=True)
 os.makedirs(ASSETS_DIR, exist_ok=True)
 

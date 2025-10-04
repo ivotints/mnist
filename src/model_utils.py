@@ -4,7 +4,7 @@ import threading
 import os
 
 MODEL_PATH = os.path.join('models', 'mnist_model.keras')
-ASSETS_DIR = os.path.join('assets')
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets')
 
 class TrainingThread(threading.Thread):
     def __init__(self, model, x_train, y_train_cat, x_test, y_test_cat, epochs, batch_size, history_callback):

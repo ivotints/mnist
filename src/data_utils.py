@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import os
 
 # Create assets directory
-ASSETS_DIR = os.path.join('..', 'assets')
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets')
 os.makedirs(ASSETS_DIR, exist_ok=True)
 
 def load_mnist_data():
