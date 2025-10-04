@@ -4,7 +4,9 @@ import numpy as np
 from tensorflow import keras
 
 TFLITE_MODELS_DIR = os.path.join('tflite_models')
+ASSETS_DIR = os.path.join('assets')
 os.makedirs(TFLITE_MODELS_DIR, exist_ok=True)
+os.makedirs(ASSETS_DIR, exist_ok=True)
 
 def convert_to_tflite_float32(model, model_name='mnist_model_float32.tflite'):
     """Convert Keras model to TFLite with float32 precision"""
@@ -102,3 +104,36 @@ def compare_models(original_model, tflite_float32_path, tflite_int8_path, x_test
     results['tflite_int8'] = tflite_int8_accuracy
 
     return results
+
+def save_comparison_results(results, keras_size, float32_size, int8_size):
+    """Save comparison results to a text file in assets folder"""
+    results_path = os.path.join(ASSETS_DIR, 'tflite_comparison_results.txt')
+    
+    with open(results_path, 'w') as f:
+        f.write("TFLite Model Comparison Results\n")
+        f.write("=" * 40 + "\n\n")
+        
+        f.write("Model Accuracy Comparison:\n")
+        f.write(f"Original Keras: {results['keras']:.4f}\n")
+        f.write(f"TFLite Float32: {results['tflite_float32']:.4f}\n")
+        f.write(f"TFLite Int8: {results['tflite_int8']:.4f}\n\n")
+        
+        # Calculate accuracy drops
+        float32_drop = results['keras'] - results['tflite_float32']
+        int8_drop = results['keras'] - results['tflite_int8']
+        
+        f.write(f"Accuracy drop Float32: {float32_drop:.4f}\n")
+        f.write(f"Accuracy drop Int8: {int8_drop:.4f}\n\n")
+        
+        f.write("Model Sizes:\n")
+        f.write(f"Keras: {keras_size:.2f} MB\n")
+        f.write(f"TFLite Float32: {float32_size:.2f} MB\n")
+        f.write(f"TFLite Int8: {int8_size:.2f} MB\n\n")
+        
+        f.write("Compression ratios:\n")
+        f.write(f"Float32/Keras: {float32_size/keras_size:.2f}x\n")
+        f.write(f"Int8/Keras: {int8_size/keras_size:.2f}x\n")
+        f.write(f"Int8/Float32: {int8_size/float32_size:.2f}x\n")
+    
+    print(f"Comparison results saved to {results_path}")
+    return results_path

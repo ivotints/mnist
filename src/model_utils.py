@@ -4,6 +4,7 @@ import threading
 import os
 
 MODEL_PATH = os.path.join('models', 'mnist_model.keras')
+ASSETS_DIR = os.path.join('assets')
 
 class TrainingThread(threading.Thread):
     def __init__(self, model, x_train, y_train_cat, x_test, y_test_cat, epochs, batch_size, history_callback):
@@ -30,6 +31,8 @@ class TrainingThread(threading.Thread):
         if not self.stop_event.is_set():
             self.model.save(MODEL_PATH)
             print(f"Model saved to {MODEL_PATH}")
+            # Save training graphs after training completes
+            self.history_callback.save_training_graphs()
 
     def stop(self):
         self.stop_event.set()
@@ -42,6 +45,7 @@ class TrainingHistoryCallback(tf.keras.callbacks.Callback):
         self.val_accuracy = []
         self.loss = []
         self.val_loss = []
+        
     def on_epoch_end(self, epoch, logs=None):
         logs = logs or {}
         self.accuracy.append(logs.get('accuracy', 0))
@@ -49,6 +53,33 @@ class TrainingHistoryCallback(tf.keras.callbacks.Callback):
         self.loss.append(logs.get('loss', 0))
         self.val_loss.append(logs.get('val_loss', 0))
         self.update_func(self.accuracy, self.val_accuracy, self.loss, self.val_loss)
+    
+    def save_training_graphs(self):
+        """Save training graphs to assets folder"""
+        import matplotlib.pyplot as plt
+        
+        # Create accuracy graph
+        plt.figure(figsize=(10, 4))
+        plt.subplot(1, 2, 1)
+        plt.plot(self.accuracy, label='Training')
+        plt.plot(self.val_accuracy, label='Validation')
+        plt.title('Model Accuracy')
+        plt.xlabel('Epoch')
+        plt.ylabel('Accuracy')
+        plt.legend()
+        
+        plt.subplot(1, 2, 2)
+        plt.plot(self.loss, label='Training')
+        plt.plot(self.val_loss, label='Validation')
+        plt.title('Model Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.legend()
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(ASSETS_DIR, 'training_history.png'))
+        plt.close()
+        print(f"Training graphs saved to {os.path.join(ASSETS_DIR, 'training_history.png')}")
 
 def create_model():
     model = models.Sequential([

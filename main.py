@@ -8,9 +8,10 @@ import os
 from src.data_utils import load_mnist_data, visualize_mnist_examples, visualize_class_distribution
 from src.model_utils import create_model, TrainingThread, TrainingHistoryCallback, load_model, save_model, MODEL_PATH
 from src.drawing_canvas import DrawingCanvas
-from src.tflite_utils import convert_to_tflite_float32, convert_to_tflite_int8, compare_models, get_model_size_mb
+from src.tflite_utils import convert_to_tflite_float32, convert_to_tflite_int8, compare_models, get_model_size_mb, save_comparison_results
 
 os.makedirs('models', exist_ok=True)
+os.makedirs('assets', exist_ok=True)
 
 if __name__ == "__main__":
     (x_train, y_train, y_train_cat), (x_test, y_test, y_test_cat) = load_mnist_data()
@@ -236,6 +237,10 @@ if __name__ == "__main__":
             results_text.insert(tk.END, f"Float32/Keras: {float32_size/keras_size:.2f}x\n")
             results_text.insert(tk.END, f"Int8/Keras: {int8_size/keras_size:.2f}x\n")
             results_text.insert(tk.END, f"Int8/Float32: {int8_size/float32_size:.2f}x\n\n")
+
+            # Save results to file
+            results_file = save_comparison_results(results, keras_size, float32_size, int8_size)
+            results_text.insert(tk.END, f"Results saved to: {results_file}\n\n")
 
             results_text.see(tk.END)
 

@@ -1,6 +1,11 @@
 import numpy as np
 from tensorflow import keras
 import matplotlib.pyplot as plt
+import os
+
+# Create assets directory
+ASSETS_DIR = os.path.join('..', 'assets')
+os.makedirs(ASSETS_DIR, exist_ok=True)
 
 def load_mnist_data():
     (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
@@ -21,7 +26,7 @@ def visualize_mnist_examples(x_train, y_train):
         plt.title(f"Digit: {i}")
         plt.axis('off')
     plt.tight_layout()
-    plt.savefig('mnist_examples.png')
+    plt.savefig(os.path.join(ASSETS_DIR, 'mnist_examples.png'))
     return plt.gcf()
 
 def visualize_class_distribution(y_train, y_test):
@@ -39,5 +44,5 @@ def visualize_class_distribution(y_train, y_test):
     plt.xlabel('Digit')
     plt.ylabel('Amount')
     plt.tight_layout()
-    plt.savefig('class_distribution.png')
+    plt.savefig(os.path.join(ASSETS_DIR, 'class_distribution.png'))
     return plt.gcf()
